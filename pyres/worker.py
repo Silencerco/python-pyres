@@ -25,7 +25,7 @@ class Worker(object):
 
     job_class = Job
 
-    def __init__(self, queues=(), server="localhost:6379", password=None, timeout=None):
+    def __init__(self, queues=(), server="localhost:6379", password=None, timeout=None, odoo_env=None):
         self.queues = queues
         self.validate_queues()
         self._shutdown = False
@@ -33,6 +33,7 @@ class Worker(object):
         self.pid = os.getpid()
         self.hostname = os.uname()[1]
         self.timeout = timeout
+        self.odoo_env = odoo_env
 
         if isinstance(server, string_types):
             self.resq = ResQ(server=server, password=password)
@@ -118,7 +119,7 @@ class Worker(object):
                                                    ','.join(self.queues),
                                                    msg))
 
-    def work(self, interval=5):
+    def work(self, interval=5, odoo_env=None):
         """Invoked by ``run`` method. ``work`` listens on a list of queues and sleeps
         for ``interval`` time.
 
@@ -276,7 +277,7 @@ class Worker(object):
 
     def reserve(self, timeout=10):
         logger.debug('checking queues %s' % self.queues)
-        job = self.job_class.reserve(self.queues, self.resq, self.__str__(), timeout=timeout)
+        job = self.job_class.reserve(self.queues, self.resq, self.__str__(), timeout=timeout, odoo_env=self.odoo_env)
         if job:
             logger.info('Found job on %s: %s' % (job._queue, job))
             return job
@@ -341,8 +342,8 @@ class Worker(object):
             return []
 
     @classmethod
-    def run(cls, queues, server="localhost:6379", password=None, interval=None, timeout=None):
-        worker = cls(queues=queues, server=server, password=password, timeout=timeout)
+    def run(cls, queues, server="localhost:6379", password=None, interval=None, timeout=None, odoo_env=None):
+        worker = cls(queues=queues, server=server, password=password, timeout=timeout, odoo_env=odoo_env)
         if interval is not None:
             worker.work(interval)
         else:
