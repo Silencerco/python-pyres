@@ -27,11 +27,12 @@ class Job(object):
 
     safe_str_to_class = staticmethod(safe_str_to_class)
 
-    def __init__(self, queue, payload, resq, worker=None):
+    def __init__(self, queue, payload, resq, worker=None, odoo_env=None):
         self._queue = queue
         self._payload = payload
         self.resq = resq
         self._worker = worker
+        self._odoo_env = odoo_env
 
         self.enqueue_timestamp = self._payload.get("enqueue_timestamp")
 
@@ -80,7 +81,7 @@ class Job(object):
         try:
             if before_perform:
                 payload_class.before_perform(metadata)
-            return payload_class.perform(*args)
+            return payload_class.perform(self._odoo_env, *args)
         except Exception as e:
             metadata["failed"] = True
             metadata["exception"] = e
@@ -129,7 +130,7 @@ class Job(object):
         return False
 
     @classmethod
-    def reserve(cls, queues, res, worker=None, timeout=10):
+    def reserve(cls, queues, res, worker=None, timeout=10, odoo_env=None):
         """Reserve a job on one of the queues. This marks this job so
         that other workers will not pick it up.
 
@@ -138,4 +139,4 @@ class Job(object):
             queues = [queues]
         queue, payload = res.pop(queues, timeout=timeout)
         if payload:
-            return cls(queue, payload, res, worker)
+            return cls(queue, payload, res, worker, odoo_env)
